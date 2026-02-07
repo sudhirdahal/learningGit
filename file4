@@ -1,1 +1,46 @@
-hello...
+# --- Git branch in prompt (Rock-Solid Toggle) ---
+autoload -Uz vcs_info
+setopt prompt_subst
+
+# 1. Enable hooks and change detection
+zstyle ':vcs_info:*' enable git
+zstyle ':vcs_info:git:*' check-for-changes true
+zstyle ':vcs_info:git*+set-message:*' hooks git-status-icon
+
+# 2. Define the behavior of the %u and %c variables
+# We set these to "dirty" so we can detect them in the hook
+zstyle ':vcs_info:git:*' unstagedstr "dirty"
+zstyle ':vcs_info:git:*' stagedstr "dirty"
+
+# 3. The Hook: This forces the toggle
++vi-git-status-icon() {
+    # If either %u or %c contains the word "dirty", show Red Dot
+    if [[ -n "${hook_com[unstaged]}" || -n "${hook_com[staged]}" ]]; then
+        hook_com[misc]=" %F{203}●%f"
+    else
+        # Otherwise, show Green Tick
+        hook_com[misc]=" %F{114}✔%f"
+    fi
+}
+
+# 4. The Formats (using %m for our icon)
+zstyle ':vcs_info:git:*' formats "%F{117} %b%f%m"
+zstyle ':vcs_info:git:*' actionformats "%F{117} %b%f|%F{214}%a%f%m"
+
+# Run before each prompt
+precmd() { vcs_info }
+
+# --- Path shortening & Prompt Layout (Keep as is) ---
+short_path() {
+  local p="${(%):-%~}"
+  [[ "$p" == "~" ]] && { echo "~"; return; }
+  local parts=(${(s:/:)p})
+  local n=${#parts[@]}
+  if [[ "$p" == ~* ]]; then
+    if (( n <= 3 )); then echo "$p"; else echo "~/.../${parts[n-1]}/${parts[n]}"; fi
+  else
+    if (( n <= 2 )); then echo "$p"; else echo "${parts[n-1]}/${parts[n]}"; fi
+  fi
+}
+
+PROMPT='%F{81}%n%f %F{110}$(short_path)%f ${vcs_info_msg_0_} %F{244}%%%f '
